@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1d23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cintreuse à Galets</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQ2ludHJldXNlIMOgIEdhbGV0cyIsInNob3J0X25hbWUiOiJDaW50cmV1c2UiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzFhMWQyMyIsInRoZW1lX2NvbG9yIjoiIzFhMWQyMyIsImljb25zIjpbXX0=">
+<style>
+:root {
+  --bg: #1a1d23;
+  --surface: #24282f;
+  --surface2: #2c313a;
+  --border: #3a3f4a;
+  --text: #e0e2e6;
+  --text-dim: #8a8f9a;
+  --blue: #4a9eff;
+  --blue-dim: #2a5a8f;
+  --green: #3dbd6e;
+  --green-dim: #1e5e37;
+  --red: #e85454;
+  --yellow: #e8b84a;
+  --yellow-dim: #4a3a1a;
+  --font: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { 
+  height:100%; background:var(--bg); color:var(--text); 
+  font-family:var(--font); font-size:14px; line-height:1.5;
+  -webkit-tap-highlight-color:transparent;
+  overflow:hidden;
+}
+/* Layout */
+#app { display:flex; flex-direction:column; height:100dvh; }
+header { 
+  padding:12px 16px; background:var(--surface); 
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px;
+  flex-shrink:0;
+}
+header h1 { font-size:16px; font-weight:600; letter-spacing:0.5px; color:var(--blue); }
+header .badge { font-size:10px; background:var(--blue-dim); color:var(--blue); padding:2px 8px; border-radius:3px; }
+/* Tabs */
+.tabs {
+  display:flex; background:var(--surface); border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.tab {
+  flex:1; padding:12px; text-align:center; font-size:13px; font-weight:500;
+  color:var(--text-dim); cursor:pointer; border:none; background:none;
+  border-bottom:2px solid transparent; transition:all 0.2s;
+  font-family:var(--font);
+}
+.tab.active { color:var(--blue); border-bottom-color:var(--blue); background:var(--surface2); }
+.tab:active { background:var(--surface2); }
+/* Panels */
+.panel { display:none; flex:1; overflow-y:auto; padding:16px; }
+.panel.active { display:block; }
+/* Form */
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; letter-spacing:0.3px; }
+.form-group input[type="number"], .form-group select {
+  width:100%; padding:12px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--font); font-size:15px;
+  outline:none; transition:border-color 0.2s;
+  -moz-appearance:textfield;
+}
+.form-group input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.form-group input:focus, .form-group select:focus { border-color:var(--blue); }
+.checkbox-group {
+  display:flex; align-items:center; gap:10px; padding:12px;
+  background:var(--surface2); border-radius:6px; cursor:pointer;
+  border:1px solid var(--border);
+}
+.checkbox-group input[type="checkbox"] {
+  width:20px; height:20px; accent-color:var(--blue); cursor:pointer;
+}
+.checkbox-group span { font-size:14px; }
+.row { display:flex; gap:12px; }
+.row .form-group { flex:1; }
+#btn-calc {
+  width:100%; padding:14px; background:var(--blue); color:#fff; border:none;
+  border-radius:6px; font-family:var(--font); font-size:15px; font-weight:600;
+  cursor:pointer; letter-spacing:0.5px; transition:opacity 0.2s;
+  margin-top:8px;
+}
+#btn-calc:active { opacity:0.8; }
+#btn-calc:disabled { opacity:0.4; cursor:default; }
+/* Navigation solutions */
+.sol-nav {
+  display:flex; align-items:center; gap:8px; padding:12px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.sol-nav button {
+  padding:10px 16px; background:var(--surface2); border:1px solid var(--border);
+  border-radius:6px; color:var(--text); font-family:var(--font); font-size:13px;
+  cursor:pointer; white-space:nowrap;
+}
+.sol-nav button:active { background:var(--border); }
+.sol-nav button:disabled { opacity:0.3; cursor:default; }
+.sol-nav .sol-info { flex:1; text-align:center; font-size:13px; color:var(--text-dim); }
+.sol-nav .sol-info .ecart { color:var(--yellow); }
+.sol-nav .sol-info .exact { color:var(--green); }
+/* Table */
+.config-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
+.config-table th {
+  background:var(--surface2); padding:8px 6px; text-align:left;
+  color:var(--text-dim); font-weight:500; font-size:11px;
+  border-bottom:1px solid var(--border); white-space:nowrap;
+}
+.config-table td {
+  padding:8px 6px; border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.config-table tr.warn td { background:var(--yellow-dim); }
+.config-table .warn-badge {
+  display:inline-block; background:var(--yellow); color:#000; font-size:10px;
+  padding:1px 6px; border-radius:3px; font-weight:600;
+}
+/* Visual */
+.axis-visual {
+  margin-bottom:20px; padding:12px; background:var(--surface);
+  border-radius:6px; border:1px solid var(--border);
+}
+.axis-label { font-size:12px; color:var(--text-dim); margin-bottom:8px; font-weight:500; }
+.axis-bar {
+  display:flex; align-items:center; height:44px; position:relative;
+  gap:1px;
+}
+.block {
+  display:flex; align-items:center; justify-content:center;
+  height:100%; font-size:10px; font-weight:600; border-radius:3px;
+  position:relative; min-width:18px; white-space:nowrap;
+  transition:all 0.3s;
+}
+.block.cale { background:var(--blue); color:#fff; }
+.block.cale.inactive { background:var(--surface2); color:var(--text-dim); border:1px dashed var(--border); }
+.block.galet {
+  background:rgba(61,189,110,0.25); border:2px solid var(--green);
+  color:var(--green); font-size:9px; flex-direction:column; line-height:1.2;
+}
+.block.galet .bore-left, .block.galet .bore-right {
+  position:absolute; top:50%; transform:translateY(-50%);
+  font-size:8px; color:var(--green); opacity:0.7;
+}
+.block.galet .bore-left { left:3px; }
+.block.galet .bore-right { right:3px; }
+.useful-marker {
+  position:absolute; top:-4px; bottom:-4px; width:2px;
+  background:var(--red); z-index:5;
+}
+.useful-bracket {
+  position:absolute; top:-12px; font-size:10px; color:var(--red);
+  white-space:nowrap; font-weight:600;
+}
+.axis-visual.warn { border-color:var(--yellow); }
+.axis-visual.warn .axis-label .warn-text { color:var(--yellow); font-size:11px; }
+/* Status messages */
+.status { padding:16px; text-align:center; color:var(--text-dim); font-size:13px; }
+.status.error { color:var(--red); }
+/* Scrollbar */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+/* Hidden */
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>⚙ CINTREUSE</h1>
+    <span class="badge">GALETS</span>
+  </header>
+  <div class="tabs">
+    <button class="tab active" data-tab="input">INPUT</button>
+    <button class="tab" data-tab="tableau">TABLEAU</button>
+    <button class="tab" data-tab="visuel">VISUEL</button>
+  </div>
+
+  <!-- INPUT -->
+  <div id="panel-input" class="panel active">
+    <div class="form-group">
+      <label class="checkbox-group" id="sym-group">
+        <input type="checkbox" id="sym" checked>
+        <span>Profil symétrique</span>
+      </label>
+    </div>
+    <div class="form-group">
+      <label for="larg-bas">Largeur Bas (mm) — Axes 1 &amp; 3</label>
+      <input type="number" id="larg-bas" min="0" step="0.5" placeholder="ex: 35">
+    </div>
+    <div id="asym-fields" class="hidden">
+      <div class="form-group">
+        <label for="larg-haut">Largeur Haut (mm) — Axe 2</label>
+        <input type="number" id="larg-haut" min="0" step="0.5" placeholder="ex: 4">
+      </div>
+      <div class="form-group">
+        <label for="align-type">Alignement</label>
+        <select id="align-type">
+          <option value="M">M — Machine</option>
+          <option value="E">E — Écrou</option>
+          <option value="C" selected>C — Centré</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="tolerance">Tolérance (mm)</label>
+      <input type="number" id="tolerance" min="0" step="0.1" value="0.5">
+    </div>
+    <button id="btn-calc">CALCULER LA CONFIGURATION</button>
+    <div id="calc-status" class="status hidden"></div>
+  </div>
+
+  <!-- TABLEAU -->
+  <div id="panel-tableau" class="panel">
+    <div class="sol-nav" id="sol-nav">
+      <button id="btn-prev" disabled>← Préc</button>
+      <div class="sol-info" id="sol-info">Aucun calcul</div>
+      <button id="btn-next" disabled>Suiv →</button>
+    </div>
+    <div id="table-container">
+      <div class="status">Lance un calcul depuis l'onglet INPUT</div>
+    </div>
+  </div>
+
+  <!-- VISUEL -->
+  <div id="panel-visuel" class="panel">
+    <div class="sol-nav" id="sol-nav2">
+      <button id="btn-prev2" disabled>← Préc</button>
+      <div class="sol-info" id="sol-info2">Aucun calcul</div>
+      <button id="btn-next2" disabled>Suiv →</button>
+    </div>
+    <div id="visual-container">
+      <div class="status">Lance un calcul depuis l'onglet INPUT</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// === DATA ===
+const GALETS = {
+  A: { name:'A', thickness:25, bores:[3,2] },
+  B: { name:'B', thickness:58, bores:[4,6] }
+};
+const CALES = [1,2,8,11,17,21];
+
+// === ALGORITHM ===
+function generateConfigs(targetWidth, tolerance) {
+  const results = [];
+  // Galet pairs: must use one A and one B
+  const pairs = [
+    ['A','B'],
+    ['B','A']
+  ];
+  for (const [g1Name, g2Name] of pairs) {
+    const g1 = GALETS[g1Name];
+    const g2 = GALETS[g2Name];
+    // Orientations for each galet
+    const g1Orients = [
+      { left: g1.bores[0], right: g1.bores[1] },
+      { left: g1.bores[1], right: g1.bores[0] }
+    ];
+    const g2Orients = [
+      { left: g2.bores[0], right: g2.bores[1] },
+      { left: g2.bores[1], right: g2.bores[0] }
+    ];
+    for (const o1 of g1Orients) {
+      for (const o2 of g2Orients) {
+        // For each starting cale
+        for (let ci = 0; ci < CALES.length; ci++) {
+          const caleDebut = CALES[ci];
+          // Position interdite: caleDebut must be > g1.left bore
+          if (caleDebut <= o1.left) continue;
+          
+          // Target sum for cales_entre
+          // largeur_utile = -g1.right + sum(cales_entre) + (-g2.left)
+          // so sum(cales_entre) = targetWidth + g1.right + g2.left
+          const calesEntreTarget = targetWidth + o1.right + o2.left;
+          
+          // Available cales (excluding caleDebut)
+          const availCales = CALES.filter((_, i) => i !== ci);
+          
+          // Find all subsets of availCales summing to target (within tolerance)
+          const subsets = findSubsets(availCales, calesEntreTarget, tolerance);
+          
+          for (const { subset, sum: subsetSum } of subsets) {
+            const actualWidth = subsetSum - o1.right - o2.left;
+            const ecart = Math.abs(actualWidth - targetWidth);
+            // Remaining cales for cales_fin
+            const usedIndices = new Set();
+            const tempAvail = [...availCales];
+            const calesEntre = [...subset];
+            for (const c of calesEntre) {
+              const idx = tempAvail.indexOf(c);
+              tempAvail.splice(idx, 1);
+            }
+            const calesFin = tempAvail;
+            
+            // Calculate alignment_M
+            // alignement_M = caleDebut + (-g1.left) + g1.thickness
+            // = caleDebut - g1.left + g1.thickness
+            const alignM = caleDebut - o1.left + g1.thickness;
+            
+            results.push({
+              caleDebut,
+              galet1: { name:g1Name, thickness:g1.thickness, left:o1.left, right:o1.right },
+              galet2: { name:g2Name, thickness:g2.thickness, left:o2.left, right:o2.right },
+              calesEntre: calesEntre.sort((a,b) => b-a),
+              calesFin: calesFin.sort((a,b) => b-a),
+              largeurUtile: actualWidth,
+              ecart,
+              alignM
+            });
+          }
+        }
+      }
+    }
+  }
+  // Sort: exact first, then by ecart
+  results.sort((a,b) => a.ecart - b.ecart);
+  return results;
+}
+
+function findSubsets(cales, target, tolerance) {
+  const results = [];
+  const n = cales.length;
+  // Enumerate all 2^n subsets (max 2^5=32)
+  for (let mask = 0; mask < (1 << n); mask++) {
+    let sum = 0;
+    const subset = [];
+    for (let i = 0; i < n; i++) {
+      if (mask & (1 << i)) {
+        sum += cales[i];
+        subset.push(cales[i]);
+      }
+    }
+    if (Math.abs(sum - target) <= tolerance) {
+      results.push({ subset, sum });
+    }
+  }
+  // Sort by distance to target
+  results.sort((a,b) => Math.abs(a.sum - target) - Math.abs(b.sum - target));
+  return results;
+}
+
+function solveFull(largBas, largHaut, alignType, tolerance, symmetric) {
+  if (symmetric) {
+    // All 3 axes identical
+    const configs = generateConfigs(largBas, tolerance);
+    return configs.map(c => ({
+      axes13: c,
+      axe2: c,
+      ecartTotal: c.ecart,
+      ecartAlign: 0,
+      type: 'symmetric'
+    }));
+  }
+  
+  const configs13 = generateConfigs(largBas, tolerance);
+  const configs2 = generateConfigs(largHaut, tolerance);
+  
+  const solutions = [];
+  for (const c13 of configs13) {
+    for (const c2 of configs2) {
+      let targetAlignM2;
+      if (alignType === 'M') {
+        targetAlignM2 = c13.alignM;
+      } else if (alignType === 'E') {
+        targetAlignM2 = c13.alignM + largBas - largHaut;
+      } else { // C
+        targetAlignM2 = c13.alignM + (largBas - largHaut) / 2;
+      }
+      const ecartAlign = Math.abs(c2.alignM - targetAlignM2);
+      if (ecartAlign <= tolerance) {
+        solutions.push({
+          axes13: c13,
+          axe2: c2,
+          ecartTotal: Math.max(c13.ecart, c2.ecart, ecartAlign),
+          ecartWidth13: c13.ecart,
+          ecartWidth2: c2.ecart,
+          ecartAlign,
+          targetAlignM2,
+          type: 'asymmetric'
+        });
+      }
+    }
+  }
+  // Sort: prioritize solutions with zero ecart, then lowest ecart
+  solutions.sort((a,b) => {
+    if (a.ecartTotal === 0 && b.ecartTotal !== 0) return -1;
+    if (b.ecartTotal === 0 && a.ecartTotal !== 0) return 1;
+    return a.ecartTotal - b.ecartTotal;
+  });
+  return solutions;
+}
+
+// === UI STATE ===
+let solutions = [];
+let currentIdx = 0;
+
+// === TABS ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// === FORM LOGIC ===
+const symCb = document.getElementById('sym');
+const asymFields = document.getElementById('asym-fields');
+symCb.addEventListener('change', () => {
+  asymFields.classList.toggle('hidden', symCb.checked);
+});
+
+// === CALC ===
+document.getElementById('btn-calc').addEventListener('click', () => {
+  const largBas = parseFloat(document.getElementById('larg-bas').value);
+  const largHaut = symCb.checked ? largBas : parseFloat(document.getElementById('larg-haut').value);
+  const alignType = symCb.checked ? 'C' : document.getElementById('align-type').value;
+  const tolerance = parseFloat(document.getElementById('tolerance').value) || 0.5;
+  const status = document.getElementById('calc-status');
+  
+  if (isNaN(largBas) || largBas < 0) {
+    status.className = 'status error'; status.classList.remove('hidden');
+    status.textContent = 'Largeur Bas invalide'; return;
+  }
+  if (!symCb.checked && (isNaN(largHaut) || largHaut < 0)) {
+    status.className = 'status error'; status.classList.remove('hidden');
+    status.textContent = 'Largeur Haut invalide'; return;
+  }
+  
+  status.className = 'status'; status.classList.remove('hidden');
+  status.textContent = 'Calcul en cours...';
+  
+  setTimeout(() => {
+    solutions = solveFull(largBas, largHaut, alignType, tolerance, symCb.checked);
+    currentIdx = 0;
+    
+    if (solutions.length === 0) {
+      status.className = 'status error';
+      status.textContent = `Aucune solution trouvée (tolérance ${tolerance}mm)`;
+      updateNav();
+      document.getElementById('table-container').innerHTML = '<div class="status error">Aucune solution</div>';
+      document.getElementById('visual-container').innerHTML = '<div class="status error">Aucune solution</div>';
+    } else {
+      status.className = 'status';
+      status.textContent = `${solutions.length} solution(s) trouvée(s)`;
+      updateNav();
+      renderCurrent();
+      // Switch to tableau tab
+      document.querySelectorAll('.tab')[1].click();
+    }
+  }, 50);
+});
+
+// === NAVIGATION ===
+function updateNav() {
+  const hasSolutions = solutions.length > 0;
+  ['btn-prev','btn-prev2'].forEach(id => {
+    document.getElementById(id).disabled = !hasSolutions || currentIdx === 0;
+  });
+  ['btn-next','btn-next2'].forEach(id => {
+    document.getElementById(id).disabled = !hasSolutions || currentIdx >= solutions.length - 1;
+  });
+  const infoText = hasSolutions ? formatSolInfo(solutions[currentIdx], currentIdx) : 'Aucun calcul';
+  document.getElementById('sol-info').innerHTML = infoText;
+  document.getElementById('sol-info2').innerHTML = infoText;
+}
+
+function formatSolInfo(sol, idx) {
+  const num = `Solution ${idx+1}/${solutions.length}`;
+  if (sol.ecartTotal === 0) {
+    return `${num} — <span class="exact">exact ✓</span>`;
+  }
+  return `${num} — <span class="ecart">écart ±${sol.ecartTotal.toFixed(1)}mm</span>`;
+}
+
+function navigate(delta) {
+  const newIdx = currentIdx + delta;
+  if (newIdx >= 0 && newIdx < solutions.length) {
+    currentIdx = newIdx;
+    updateNav();
+    renderCurrent();
+  }
+}
+
+['btn-prev','btn-prev2'].forEach(id => document.getElementById(id).addEventListener('click', () => navigate(-1)));
+['btn-next','btn-next2'].forEach(id => document.getElementById(id).addEventListener('click', () => navigate(1)));
+
+// === RENDER TABLE ===
+function renderCurrent() {
+  if (!solutions.length) return;
+  const sol = solutions[currentIdx];
+  renderTable(sol);
+  renderVisual(sol);
+}
+
+function formatGalet(g) {
+  return `<span style="color:var(--green)">-${g.left}[${g.thickness}]-${g.right}</span>`;
+}
+
+function formatCales(cales) {
+  return cales.length ? cales.join(', ') : '—';
+}
+
+function renderTable(sol) {
+  const c13 = sol.axes13;
+  const c2 = sol.axe2;
+  const isSym = sol.type === 'symmetric';
+  
+  let warn2 = '';
+  let rowClass2 = '';
+  if (sol.ecartTotal > 0 && !isSym) {
+    const parts = [];
+    if (sol.ecartWidth2 > 0) parts.push(`largeur: ±${sol.ecartWidth2.toFixed(1)}mm`);
+    if (sol.ecartAlign > 0) parts.push(`align: cible ${sol.targetAlignM2.toFixed(1)}mm`);
+    if (parts.length) {
+      warn2 = ` <span class="warn-badge">⚠ ${parts.join(', ')}</span>`;
+      rowClass2 = ' class="warn"';
+    }
+  }
+  if (isSym && c13.ecart > 0) {
+    warn2 = ` <span class="warn-badge">⚠ ±${c13.ecart.toFixed(1)}mm</span>`;
+    rowClass2 = ' class="warn"';
+  }
+  
+  let warn13 = '';
+  let rowClass13 = '';
+  if (c13.ecart > 0) {
+    warn13 = ` <span class="warn-badge">⚠ ±${c13.ecart.toFixed(1)}mm</span>`;
+    rowClass13 = ' class="warn"';
+  }
+
+  const html = `
+  <table class="config-table">
+    <thead>
+      <tr><th>Axe</th><th>Cale déb.</th><th>Galet 1</th><th>Cales entre</th><th>Galet 2</th><th>Cales fin</th><th>Larg.</th><th>Align M</th></tr>
+    </thead>
+    <tbody>
+      <tr${rowClass13}>
+        <td><strong>1</strong></td>
+        <td>${c13.caleDebut}</td>
+        <td>${formatGalet(c13.galet1)}</td>
+        <td>${formatCales(c13.calesEntre)}</td>
+        <td>${formatGalet(c13.galet2)}</td>
+        <td>${formatCales(c13.calesFin)}</td>
+        <td>${c13.largeurUtile}mm${warn13}</td>
+        <td>${c13.alignM}mm</td>
+      </tr>
+      <tr${rowClass2}>
+        <td><strong>2</strong></td>
+        <td>${c2.caleDebut}</td>
+        <td>${formatGalet(c2.galet1)}</td>
+        <td>${formatCales(c2.calesEntre)}</td>
+        <td>${formatGalet(c2.galet2)}</td>
+        <td>${formatCales(c2.calesFin)}</td>
+        <td>${c2.largeurUtile}mm${isSym ? warn13 : (sol.ecartWidth2 > 0 ? ` <span class="warn-badge">⚠ ±${sol.ecartWidth2.toFixed(1)}mm</span>` : '')}</td>
+        <td>${c2.alignM}mm${warn2}</td>
+      </tr>
+      <tr${rowClass13}>
+        <td><strong>3</strong></td>
+        <td>${c13.caleDebut}</td>
+        <td>${formatGalet(c13.galet1)}</td>
+        <td>${formatCales(c13.calesEntre)}</td>
+        <td>${formatGalet(c13.galet2)}</td>
+        <td>${formatCales(c13.calesFin)}</td>
+        <td>${c13.largeurUtile}mm${warn13}</td>
+        <td>${c13.alignM}mm</td>
+      </tr>
+    </tbody>
+  </table>`;
+  document.getElementById('table-container').innerHTML = html;
+}
+
+// === RENDER VISUAL ===
+function renderVisual(sol) {
+  const c13 = sol.axes13;
+  const c2 = sol.axe2;
+  const container = document.getElementById('visual-container');
+  
+  const html = `
+    ${renderAxisVisual('Axe 1 (bas)', c13, c13.ecart > 0)}
+    ${renderAxisVisual('Axe 2 (haut)', c2, sol.type === 'symmetric' ? c2.ecart > 0 : (sol.ecartWidth2 > 0 || sol.ecartAlign > 0), sol.type !== 'symmetric' && sol.ecartAlign > 0 ? `Align: ${c2.alignM}mm (cible: ${sol.targetAlignM2.toFixed(1)}mm)` : '')}
+    ${renderAxisVisual('Axe 3 (bas)', c13, c13.ecart > 0)}
+  `;
+  container.innerHTML = html;
+}
+
+function renderAxisVisual(label, config, hasWarn, warnText) {
+  const SCALE = 2.2; // px per mm
+  const allCales = [...CALES];
+  const usedEntre = new Set();
+  // Track which cales are used
+  const caleDebutVal = config.caleDebut;
+  const calesEntreVals = [...config.calesEntre];
+  
+  // Build blocks
+  let blocks = '';
+  
+  // Machine marker
+  blocks += `<div style="width:3px;height:44px;background:var(--text-dim);border-radius:1px;flex-shrink:0" title="Machine"></div>`;
+  
+  // Cale début
+  blocks += renderCaleBlock(config.caleDebut, true, SCALE);
+  
+  // Galet 1
+  blocks += renderGaletBlock(config.galet1, SCALE);
+  
+  // Mark start of useful width
+  blocks += `<div class="useful-marker" style="position:relative;width:2px;flex-shrink:0;background:var(--red);height:52px;margin:0 -1px;z-index:5"></div>`;
+  
+  // Cales entre
+  for (const c of config.calesEntre) {
+    blocks += renderCaleBlock(c, true, SCALE);
+  }
+  
+  // Mark end of useful width
+  blocks += `<div class="useful-marker" style="position:relative;width:2px;flex-shrink:0;background:var(--red);height:52px;margin:0 -1px;z-index:5"></div>`;
+  
+  // Galet 2
+  blocks += renderGaletBlock(config.galet2, SCALE);
+  
+  // Cales fin
+  for (const c of config.calesFin) {
+    blocks += renderCaleBlock(c, true, SCALE);
+  }
+  
+  // Écrou marker
+  blocks += `<div style="width:3px;height:44px;background:var(--text-dim);border-radius:1px;flex-shrink:0" title="Écrou"></div>`;
+  
+  const warnClass = hasWarn ? ' warn' : '';
+  const warnHtml = warnText ? `<span class="warn-text"> — ⚠ ${warnText}</span>` : (hasWarn ? '<span class="warn-text"> — ⚠ écart</span>' : '');
+  
+  return `
+  <div class="axis-visual${warnClass}">
+    <div class="axis-label">${label}${warnHtml}  <span style="color:var(--red);font-size:10px;margin-left:8px">▮ = largeur utile ${config.largeurUtile}mm</span></div>
+    <div class="axis-bar">${blocks}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text-dim)">
+      <span>◄ Machine</span>
+      <span>Align M = ${config.alignM}mm</span>
+      <span>Écrou ►</span>
+    </div>
+  </div>`;
+}
+
+function renderCaleBlock(value, active, scale) {
+  const w = Math.max(18, value * scale);
+  const cls = active ? 'cale' : 'cale inactive';
+  return `<div class="block ${cls}" style="width:${w}px">${value}</div>`;
+}
+
+function renderGaletBlock(g, scale) {
+  const w = Math.max(30, g.thickness * scale);
+  return `<div class="block galet" style="width:${w}px">
+    <span class="bore-left">-${g.left}</span>
+    <span>${g.name} ${g.thickness}</span>
+    <span class="bore-right">-${g.right}</span>
+  </div>`;
+}
+
+// === SERVICE WORKER ===
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'cintreuse-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(
+        caches.open(CACHE).then(c => c.addAll(['./', self.location.href]))
+          .then(() => self.skipWaiting())
+      );
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(
+        caches.keys().then(keys => Promise.all(
+          keys.filter(k => k !== CACHE).map(k => caches.delete(k))
+        )).then(() => self.clients.claim())
+      );
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return resp;
+        }))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+</script>
+</body>
+</html>
