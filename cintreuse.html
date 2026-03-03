@@ -251,62 +251,47 @@ const CALES = [1,2,8,11,17,21];
 // === ALGORITHM ===
 function generateConfigs(targetWidth, tolerance) {
   const results = [];
-  // Galet pairs: must use one A and one B
-  const pairs = [
-    ['A','B'],
-    ['B','A']
-  ];
+  const pairs = [['A','B'],['B','A']];
+  
   for (const [g1Name, g2Name] of pairs) {
     const g1 = GALETS[g1Name];
     const g2 = GALETS[g2Name];
-    // Orientations for each galet
     const g1Orients = [
-      { left: g1.bores[0], right: g1.bores[1] },
-      { left: g1.bores[1], right: g1.bores[0] }
+      { left:g1.bores[0], right:g1.bores[1] },
+      { left:g1.bores[1], right:g1.bores[0] }
     ];
     const g2Orients = [
-      { left: g2.bores[0], right: g2.bores[1] },
-      { left: g2.bores[1], right: g2.bores[0] }
+      { left:g2.bores[0], right:g2.bores[1] },
+      { left:g2.bores[1], right:g2.bores[0] }
     ];
     for (const o1 of g1Orients) {
       for (const o2 of g2Orients) {
-        // For each starting cale
-        for (let ci = 0; ci < CALES.length; ci++) {
-          const caleDebut = CALES[ci];
-          // Position interdite: caleDebut must be > g1.left bore
-          if (caleDebut <= o1.left) continue;
+        const calesEntreTarget = targetWidth + o1.right + o2.left;
+        
+        // Enumerate all possible cales_entre subsets from the 6 cales
+        const entreSubsets = findSubsets(CALES, calesEntreTarget, tolerance);
+        
+        for (const { subset: calesEntre, sum: entreSum } of entreSubsets) {
+          const actualWidth = entreSum - o1.right - o2.left;
+          const ecart = Math.abs(actualWidth - targetWidth);
           
-          // Target sum for cales_entre
-          // largeur_utile = -g1.right + sum(cales_entre) + (-g2.left)
-          // so sum(cales_entre) = targetWidth + g1.right + g2.left
-          const calesEntreTarget = targetWidth + o1.right + o2.left;
+          // Remaining cales after cales_entre
+          const remaining = removeSubset(CALES, calesEntre);
           
-          // Available cales (excluding caleDebut)
-          const availCales = CALES.filter((_, i) => i !== ci);
+          // Enumerate all possible cales_début subsets from remaining
+          // Constraint: sum(cales_début) >= bore_machine - 1
+          const minDebut = o1.left - 1;
+          const debutSubsets = allSubsets(remaining);
           
-          // Find all subsets of availCales summing to target (within tolerance)
-          const subsets = findSubsets(availCales, calesEntreTarget, tolerance);
-          
-          for (const { subset, sum: subsetSum } of subsets) {
-            const actualWidth = subsetSum - o1.right - o2.left;
-            const ecart = Math.abs(actualWidth - targetWidth);
-            // Remaining cales for cales_fin
-            const usedIndices = new Set();
-            const tempAvail = [...availCales];
-            const calesEntre = [...subset];
-            for (const c of calesEntre) {
-              const idx = tempAvail.indexOf(c);
-              tempAvail.splice(idx, 1);
-            }
-            const calesFin = tempAvail;
+          for (const calesDebut of debutSubsets) {
+            const sumDebut = calesDebut.reduce((a,b) => a+b, 0);
+            if (sumDebut < minDebut) continue;
             
-            // Calculate alignment_M
-            // alignement_M = caleDebut + (-g1.left) + g1.thickness
-            // = caleDebut - g1.left + g1.thickness
-            const alignM = caleDebut - o1.left + g1.thickness;
+            const calesFin = removeSubset(remaining, calesDebut);
+            const alignM = sumDebut - o1.left + g1.thickness;
             
             results.push({
-              caleDebut,
+              calesDebut: calesDebut.sort((a,b) => b-a),
               galet1: { name:g1Name, thickness:g1.thickness, left:o1.left, right:o1.right },
               galet2: { name:g2Name, thickness:g2.thickness, left:o2.left, right:o2.right },
               calesEntre: calesEntre.sort((a,b) => b-a),
@@ -320,76 +305,97 @@ function generateConfigs(targetWidth, tolerance) {
       }
     }
   }
-  // Sort: exact first, then by ecart
-  results.sort((a,b) => a.ecart - b.ecart);
-  return results;
+  // Deduplicate by signature
+  const seen = new Set();
+  const unique = results.filter(r => {
+    const sig = `${r.calesDebut}|${r.galet1.name}${r.galet1.left}${r.galet1.right}|${r.calesEntre}|${r.galet2.name}${r.galet2.left}${r.galet2.right}|${r.calesFin}`;
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+  unique.sort((a,b) => a.ecart - b.ecart);
+  return unique;
 }
 
 function findSubsets(cales, target, tolerance) {
   const results = [];
   const n = cales.length;
-  // Enumerate all 2^n subsets (max 2^5=32)
   for (let mask = 0; mask < (1 << n); mask++) {
     let sum = 0;
     const subset = [];
     for (let i = 0; i < n; i++) {
-      if (mask & (1 << i)) {
-        sum += cales[i];
-        subset.push(cales[i]);
-      }
+      if (mask & (1 << i)) { sum += cales[i]; subset.push(cales[i]); }
     }
     if (Math.abs(sum - target) <= tolerance) {
       results.push({ subset, sum });
     }
   }
-  // Sort by distance to target
   results.sort((a,b) => Math.abs(a.sum - target) - Math.abs(b.sum - target));
   return results;
 }
 
+function allSubsets(arr) {
+  const result = [];
+  const n = arr.length;
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const subset = [];
+    for (let i = 0; i < n; i++) {
+      if (mask & (1 << i)) subset.push(arr[i]);
+    }
+    result.push(subset);
+  }
+  return result;
+}
+
+function removeSubset(source, toRemove) {
+  const temp = [...source];
+  for (const c of toRemove) {
+    const idx = temp.indexOf(c);
+    if (idx !== -1) temp.splice(idx, 1);
+  }
+  return temp;
+}
+
 function solveFull(largBas, largHaut, alignType, tolerance, symmetric) {
   if (symmetric) {
-    // All 3 axes identical
     const configs = generateConfigs(largBas, tolerance);
-    return configs.map(c => ({
-      axes13: c,
-      axe2: c,
-      ecartTotal: c.ecart,
-      ecartAlign: 0,
-      type: 'symmetric'
+    return configs.slice(0, 500).map(c => ({
+      axes13: c, axe2: c, ecartTotal: c.ecart, ecartAlign: 0, type: 'symmetric'
     }));
   }
   
   const configs13 = generateConfigs(largBas, tolerance);
   const configs2 = generateConfigs(largHaut, tolerance);
   
+  // Index configs2 by alignM for fast lookup
   const solutions = [];
+  const MAX_SOLUTIONS = 500;
+  
   for (const c13 of configs13) {
+    if (solutions.length >= MAX_SOLUTIONS) break;
     for (const c2 of configs2) {
+      if (solutions.length >= MAX_SOLUTIONS) break;
       let targetAlignM2;
       if (alignType === 'M') {
         targetAlignM2 = c13.alignM;
       } else if (alignType === 'E') {
-        targetAlignM2 = c13.alignM + largBas - largHaut;
+        targetAlignM2 = c13.alignM + c13.largeurUtile - c2.largeurUtile;
       } else { // C
-        targetAlignM2 = c13.alignM + (largBas - largHaut) / 2;
+        targetAlignM2 = c13.alignM + (c13.largeurUtile - c2.largeurUtile) / 2;
       }
       const ecartAlign = Math.abs(c2.alignM - targetAlignM2);
       if (ecartAlign <= tolerance) {
         solutions.push({
-          axes13: c13,
-          axe2: c2,
-          ecartTotal: Math.max(c13.ecart, c2.ecart, ecartAlign),
-          ecartWidth13: c13.ecart,
-          ecartWidth2: c2.ecart,
-          ecartAlign,
-          targetAlignM2,
+          axes13: c13, axe2: c2,
+          ecartTotal: Math.round(Math.max(c13.ecart, c2.ecart, ecartAlign) * 100) / 100,
+          ecartWidth13: c13.ecart, ecartWidth2: c2.ecart,
+          ecartAlign: Math.round(ecartAlign * 100) / 100,
+          targetAlignM2: Math.round(targetAlignM2 * 100) / 100,
           type: 'asymmetric'
         });
       }
     }
   }
-  // Sort: prioritize solutions with zero ecart, then lowest ecart
   solutions.sort((a,b) => {
     if (a.ecartTotal === 0 && b.ecartTotal !== 0) return -1;
     if (b.ecartTotal === 0 && a.ecartTotal !== 0) return 1;
@@ -546,7 +552,7 @@ function renderTable(sol) {
     <tbody>
       <tr${rowClass13}>
         <td><strong>1</strong></td>
-        <td>${c13.caleDebut}</td>
+        <td>${formatCales(c13.calesDebut)}</td>
         <td>${formatGalet(c13.galet1)}</td>
         <td>${formatCales(c13.calesEntre)}</td>
         <td>${formatGalet(c13.galet2)}</td>
@@ -556,7 +562,7 @@ function renderTable(sol) {
       </tr>
       <tr${rowClass2}>
         <td><strong>2</strong></td>
-        <td>${c2.caleDebut}</td>
+        <td>${formatCales(c2.calesDebut)}</td>
         <td>${formatGalet(c2.galet1)}</td>
         <td>${formatCales(c2.calesEntre)}</td>
         <td>${formatGalet(c2.galet2)}</td>
@@ -566,7 +572,7 @@ function renderTable(sol) {
       </tr>
       <tr${rowClass13}>
         <td><strong>3</strong></td>
-        <td>${c13.caleDebut}</td>
+        <td>${formatCales(c13.calesDebut)}</td>
         <td>${formatGalet(c13.galet1)}</td>
         <td>${formatCales(c13.calesEntre)}</td>
         <td>${formatGalet(c13.galet2)}</td>
@@ -607,8 +613,10 @@ function renderAxisVisual(label, config, hasWarn, warnText) {
   // Machine marker
   blocks += `<div style="width:3px;height:44px;background:var(--text-dim);border-radius:1px;flex-shrink:0" title="Machine"></div>`;
   
-  // Cale début
-  blocks += renderCaleBlock(config.caleDebut, true, SCALE);
+  // Cales début
+  for (const c of config.calesDebut) {
+    blocks += renderCaleBlock(c, true, SCALE);
+  }
   
   // Galet 1
   blocks += renderGaletBlock(config.galet1, SCALE);
